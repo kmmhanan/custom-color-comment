@@ -3,6 +3,8 @@
 [![VS Code Marketplace](https://img.shields.io/badge/VS%20Code-Marketplace-007ACC?style=flat-square&logo=visualstudiocode&logoColor=white)](https://marketplace.visualstudio.com/items?itemName=kmmhanan.custom-color-comment)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue?style=flat-square)](./LICENSE)
 
+**[Install from the VS Code Marketplace →](https://marketplace.visualstudio.com/items?itemName=kmmhanan.custom-color-comment)**
+
 Color comments based on a tag right after the comment marker — inspired by
 **Colorful Comments**, rebuilt to be fully customizable from `settings.json`
 and to work across virtually any language, not just `//`.
