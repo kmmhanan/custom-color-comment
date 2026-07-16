@@ -104,4 +104,4 @@ Each value is either a plain hex string, or an object with any of:
 
 ## 📜 License
 
-MIT © [Kmm Hanan](https://github.com/kmmhanan) — see [LICENSE](./LICENSE).
+MIT © [Kmm Hanan](https://kmmhanan.com/) — see [LICENSE](./LICENSE).
