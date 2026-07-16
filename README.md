@@ -1,8 +1,8 @@
 # Custom Color Comment
 
-[![Version](https://img.shields.io/visual-studio-marketplace/v/kmmhanan.custom-color-comment)](https://marketplace.visualstudio.com/items?itemName=kmmhanan.custom-color-comment)
-[![Installs](https://img.shields.io/visual-studio-marketplace/i/kmmhanan.custom-color-comment)](https://marketplace.visualstudio.com/items?itemName=kmmhanan.custom-color-comment)
-[![Rating](https://img.shields.io/visual-studio-marketplace/r/kmmhanan.custom-color-comment)](https://marketplace.visualstudio.com/items?itemName=kmmhanan.custom-color-comment)
+[![Version](https://img.shields.io/visual-studio-marketplace/v/kmmhanan.custom-color-comment?style=flat-square&color=007ACC&logo=visualstudiocode&logoColor=white&label=Version)](https://marketplace.visualstudio.com/items?itemName=kmmhanan.custom-color-comment)
+[![Installs](https://img.shields.io/visual-studio-marketplace/i/kmmhanan.custom-color-comment?style=flat-square&color=007ACC&label=Installs)](https://marketplace.visualstudio.com/items?itemName=kmmhanan.custom-color-comment)
+[![Rating](https://img.shields.io/visual-studio-marketplace/r/kmmhanan.custom-color-comment?style=flat-square&color=007ACC&label=Rating)](https://marketplace.visualstudio.com/items?itemName=kmmhanan.custom-color-comment)
 
 **[Install from the VS Code Marketplace →](https://marketplace.visualstudio.com/items?itemName=kmmhanan.custom-color-comment)**
 
