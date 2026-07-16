@@ -73,8 +73,9 @@ Write a tag right after your comment marker:
 "ccComment.tags": {
   "!": "#FF0000",
   "?": "#121212",
+  "////": { "color": "#999999", "lineThrough": true, "opacity": 0.9 }
   "TODO": { "color": "#FFA500", "bold": true },
-  "WARN": { "color": "#FFD700", "backgroundColor": "#332200", "italic": true }
+  "WARN": { "color": "#FFD700", "backgroundColor": "#332200", "italic": true },
 }
 ```
 
