@@ -1,17 +1,17 @@
 # Custom Color Comment
 
+[![Version](https://img.shields.io/visual-studio-marketplace/v/kmmhanan.custom-color-comment)](https://marketplace.visualstudio.com/items?itemName=kmmhanan.custom-color-comment)
+[![Installs](https://img.shields.io/visual-studio-marketplace/i/kmmhanan.custom-color-comment)](https://marketplace.visualstudio.com/items?itemName=kmmhanan.custom-color-comment)
+[![Rating](https://img.shields.io/visual-studio-marketplace/r/kmmhanan.custom-color-comment)](https://marketplace.visualstudio.com/items?itemName=kmmhanan.custom-color-comment)
+
+**[Install from the VS Code Marketplace →](https://marketplace.visualstudio.com/items?itemName=kmmhanan.custom-color-comment)**
+
 Color comments based on a tag right after the comment marker — `//! red`,
 `//? cyan`, `// TODO: orange`, `//// grayed-out strikethrough` — and it works
 across virtually any language, not just `//`. Python's `#`, Lua's `--`,
 HTML's `<!-- -->`, block comments `/* */`, and more are all handled.
 
 ## Preview
-
-<!--
-GitHub's markdown renderer doesn't execute the actual text colors, so a
-screenshot is the clearest way to show this off. Drop an image at
-assets/preview.png (or wherever you like) and update the path below.
--->
 
 ![Colorful Comment preview](./resources/sample.png)
 
