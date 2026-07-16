@@ -1,0 +1,101 @@
+{
+  "name": "custom-color-comment",
+  "displayName": "Custom Color Comment",
+  "description": "Color comments based on custom tags like //! //? //TODO //////, fully configurable per-user via ccComment.tags in settings.json.",
+  "version": "0.0.1",
+  "publisher": "kmmhanan",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/kmmhanan/custom-color-comment.git"
+  },
+  "bugs": {
+    "url": "https://github.com/kmmhanan/custom-color-comment/issues"
+  },
+  "homepage": "https://github.com/kmmhanan/custom-color-comment#readme",
+  "keywords": [
+    "comments",
+    "highlight",
+    "color",
+    "todo",
+    "annotations"
+  ],
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "activationEvents": [
+    "onStartupFinished"
+  ],
+  "main": "./out/extension.js",
+  "contributes": {
+    "configuration": {
+      "type": "object",
+      "title": "Custom Color Comment",
+      "properties": {
+        "ccComment.tags": {
+          "type": "object",
+          "default": {},
+          "markdownDescription": "Map of comment tags to a color (hex string) or a style object. Merged on top of the built-in defaults (yours win on conflicts). Example:\n```json\n\"ccComment.tags\": {\n  \"!\": \"#FF0000\",\n  \"?\": \"#121212\",\n  \"TODO\": { \"color\": \"#FFA500\", \"bold\": true },\n  \"WARN\": { \"color\": \"#FFD700\", \"backgroundColor\": \"#332200\", \"italic\": true }\n}\n```",
+          "additionalProperties": {
+            "anyOf": [
+              {
+                "type": "string",
+                "description": "Hex color, e.g. #FF0000"
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "color": {
+                    "type": "string",
+                    "description": "Hex color for the text"
+                  },
+                  "backgroundColor": {
+                    "type": "string",
+                    "description": "Hex color for the background"
+                  },
+                  "bold": {
+                    "type": "boolean"
+                  },
+                  "italic": {
+                    "type": "boolean"
+                  },
+                  "lineThrough": {
+                    "type": "boolean",
+                    "description": "Strike a line through the comment text."
+                  },
+                  "opacity": {
+                    "type": "number",
+                    "minimum": 0,
+                    "maximum": 1,
+                    "description": "Text opacity from 0 (invisible) to 1 (fully opaque)."
+                  }
+                },
+                "additionalProperties": false
+              }
+            ]
+          }
+        },
+        "ccComment.disableDefaultTags": {
+          "type": "boolean",
+          "default": false,
+          "description": "If true, only your custom ccComment.tags are used (built-in defaults are not merged in)."
+        }
+      }
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "package": "vsce package"
+  },
+  "devDependencies": {
+    "@types/vscode": "^1.85.0",
+    "@types/node": "^20.0.0",
+    "typescript": "^5.4.0",
+    "@vscode/vsce": "^2.32.0"
+  }
+}
