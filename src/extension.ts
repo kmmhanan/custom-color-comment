@@ -13,14 +13,16 @@ interface TagStyle {
 type TagValue = string | TagStyle;
 
 // Built-in defaults. Users override/extend these via ccComment.tags in settings.json.
-// The first 8 mirror the well-known "Colorful Comments" extension's defaults
-// (red !, blue ?, grey // with strikethrough, yellow ^, green *, pink &,
-// purple ~, mustard todo). The rest are extras on top of that baseline.
+// The first 7 mirror the well-known "Colorful Comments" extension's defaults
+// (red !, cyan ?, yellow ^, green *, pink &, purple ~, mustard todo). The
+// rest are extras on top of that baseline. Note: the original extension
+// also ships a plain "//" fallback (grey + strikethrough on ANY untagged
+// comment) — intentionally left out here so normal comments keep their
+// default editor color. Add it back yourself if you want that look:
+// '//': { color: '#474747', lineThrough: true }
 const DEFAULT_TAGS: Record<string, TagValue> = {
-  // --- Colorful Comments' original 8 defaults ---
   "!": "#FF2D00",
-  "?": "#0076FF",
-  "//": { color: "#474747", lineThrough: true },
+  "?": "#00FFFF",
   "^": "#EAF622",
   "*": "#28FF00",
   "&": "#FF06A0",
@@ -31,7 +33,7 @@ const DEFAULT_TAGS: Record<string, TagValue> = {
   FIXME: { color: "#FF3B3B", bold: true },
   NOTE: "#00BCD4",
   HACK: "#E91E63",
-  "////": { color: "#888888", lineThrough: true, opacity: 0.7 },
+  "////": { color: "#888888", lineThrough: true, opacity: 0.9 },
 };
 
 const decorationTypes: Map<string, vscode.TextEditorDecorationType> = new Map();

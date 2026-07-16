@@ -20,6 +20,7 @@
     "todo",
     "annotations"
   ],
+  "icon": "resources/extension-icon.png",
   "engines": {
     "vscode": "^1.85.0"
   },

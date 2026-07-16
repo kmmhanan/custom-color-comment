@@ -1,45 +1,47 @@
 # Custom Color Comment
 
 Color comments based on a tag right after the comment marker — `//! red`,
-`//? blue`, `// TODO: orange`, `//// grayed-out strikethrough` — and it works
+`//? cyan`, `// TODO: orange`, `//// grayed-out strikethrough` — and it works
 across virtually any language, not just `//`. Python's `#`, Lua's `--`,
 HTML's `<!-- -->`, block comments `/* */`, and more are all handled.
 
+## Preview
+
+<!--
+GitHub's markdown renderer doesn't execute the actual text colors, so a
+screenshot is the clearest way to show this off. Drop an image at
+assets/preview.png (or wherever you like) and update the path below.
+-->
+
+![Colorful Comment preview](./resources/sample.png)
+
 ## Default tags
 
-The first 8 mirror the well-known **Colorful Comments** extension's own
+Most of these mirror the well-known **Colorful Comments** extension's own
 defaults; the rest are extras layered on top.
 
-| Tag     | Style                                                                                               | Source            |
-| ------- | --------------------------------------------------------------------------------------------------- | ----------------- |
-| `!`     | red (`#FF2D00`)                                                                                     | Colorful Comments |
-| `?`     | blue (`#0076FF`)                                                                                    | Colorful Comments |
-| `//`    | grey (`#474747`), line-through — **fallback style for any plain comment that no other tag matches** | Colorful Comments |
-| `^`     | yellow (`#EAF622`)                                                                                  | Colorful Comments |
-| `*`     | green (`#28FF00`)                                                                                   | Colorful Comments |
-| `&`     | pink (`#FF06A0`)                                                                                    | Colorful Comments |
-| `~`     | purple (`#BE00FF`)                                                                                  | Colorful Comments |
-| `todo`  | mustard (`#FF8C00`), case-insensitive                                                               | Colorful Comments |
-| `FIXME` | red, bold                                                                                           | extra             |
-| `NOTE`  | cyan                                                                                                | extra             |
-| `HACK`  | pink                                                                                                | extra             |
-| `////`  | gray, line-through, 70% opacity                                                                     | extra             |
+| Tag     | Style                                 | Source              |
+| ------- | ------------------------------------- | ------------------- |
+| `!`     | red (`#FF2D00`)                       | Colorful Comments   |
+| `?`     | cyan (`#00FFFF`)                      | Colorful Comments\* |
+| `^`     | yellow (`#EAF622`)                    | Colorful Comments   |
+| `*`     | green (`#28FF00`)                     | Colorful Comments   |
+| `&`     | pink (`#FF06A0`)                      | Colorful Comments   |
+| `~`     | purple (`#BE00FF`)                    | Colorful Comments   |
+| `todo`  | mustard (`#FF8C00`), case-insensitive | Colorful Comments   |
+| `FIXME` | red, bold                             | extra               |
+| `NOTE`  | cyan (`#00BCD4`)                      | extra               |
+| `HACK`  | pink (`#E91E63`)                      | extra               |
+| `////`  | gray, line-through, 90% opacity       | extra               |
 
-Note the `//` default: since it's the literal comment marker with no
-character after it, it acts as a catch-all style applied to _any_ plain
-comment on a line-comment-supporting language, as long as nothing more
-specific (like `!`, `todo`, or `////`) matched first. If you don't want every
-plain `//` comment greyed out, override or remove it:
+\* Colorful Comments' original `?` default is blue (`#0076FF`); this fork
+uses cyan (`#00FFFF`) instead.
 
-```json
-"ccComment.tags": {
-  "//": false
-}
-```
-
-(setting a tag to a falsy/empty value effectively disables it — or just omit
-it and set `"ccComment.disableDefaultTags": true` and list only the tags you
-want).
+**Note:** plain, untagged `//` comments are intentionally left at your
+theme's normal comment color — nothing greys them out by default. (The
+original Colorful Comments extension does ship a `//` fallback that greys
+out _every_ plain comment; if you want that look, add it yourself:
+`"//": { "color": "#474747", "lineThrough": true }`.)
 
 ## Custom colors — `settings.json`
 
@@ -50,8 +52,7 @@ Add to your user or workspace `settings.json`:
   "!": "#FF0000",
   "?": "#121212",
   "TODO": { "color": "#FFA500", "bold": true },
-  "WARN": { "color": "#FFD700", "backgroundColor": "#332200", "italic": true },
-  "DEPRECATED": { "color": "#999999", "lineThrough": true, "opacity": 0.6 }
+  "WARN": { "color": "#FFD700", "backgroundColor": "#332200", "italic": true }
 }
 ```
 
