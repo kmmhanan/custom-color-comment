@@ -34,6 +34,7 @@ const DEFAULT_TAGS: Record<string, TagValue> = {
   NOTE: "#00BCD4",
   HACK: "#E91E63",
   "////": { color: "#888888", lineThrough: true, opacity: 0.9 },
+  WARN: { color: "#FFD700", backgroundColor: "#332200", italic: true },
 };
 
 const decorationTypes: Map<string, vscode.TextEditorDecorationType> = new Map();

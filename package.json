@@ -2,7 +2,7 @@
   "name": "custom-color-comment",
   "displayName": "Custom Color Comment",
   "description": "Color comments based on custom tags like //! //? //TODO //////, fully configurable per-user via ccComment.tags in settings.json.",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "publisher": "kmmhanan",
   "license": "MIT",
   "repository": {

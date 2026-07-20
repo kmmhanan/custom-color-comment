@@ -56,11 +56,12 @@ Write a tag right after your comment marker:
 | `*`     | green (`#28FF00`)                     |
 | `&`     | pink (`#FF06A0`)                      |
 | `~`     | purple (`#BE00FF`)                    |
+| `////`  | gray, line-through, 90% opacity       |
 | `todo`  | mustard (`#FF8C00`), case-insensitive |
 | `FIXME` | red, bold                             |
 | `NOTE`  | cyan (`#00BCD4`)                      |
 | `HACK`  | pink (`#E91E63`)                      |
-| `////`  | gray, line-through, 90% opacity       |
+| `WARN`  | yellow, background, italic            |
 
 > Plain, untagged `//` comments are left at your theme's normal comment
 > color by default — nothing greys them out unless you configure it.
