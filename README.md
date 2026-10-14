@@ -86,7 +86,9 @@ Write a tag right after your comment marker:
     "errorWarning": true
   },
   "BUG": { "color": "#FF3B3B", "bold": true, "error": true, "errorColor": "red", "errorWarning": true }
-}
+},
+"ccComment.ignoreWarning": [],
+"ccComment.ignoreAggressive": ["ios/**", "macos/**"]
 ```
 
 Each value is either a plain hex string, or an object with any of:
@@ -103,6 +105,27 @@ Each value is either a plain hex string, or an object with any of:
 | `error`             | boolean | enable diagnostics for this tag                               |
 | `errorColor`        | string  | `"blue"` = Information, `"yellow"` = Warning, `"red"` = Error |
 | `errorWarning`      | boolean | create a native VS Code diagnostic and show it in Problems    |
+
+### Controlling which paths are checked
+
+Both path settings accept workspace-relative glob patterns. In a Flutter
+workspace, for example:
+
+```json
+"ccComment.ignoreWarning": ["ios/**"]
+```
+
+This suppresses comment diagnostics for files under `ios` (like the
+`ccComment:disable-errors` directive), while keeping comment colors active.
+
+```json
+"ccComment.ignoreAggressive": ["ios/**", "macos/**"]
+```
+
+This keeps those paths out of background workspace scans, including startup and
+file create/delete rescans. Their diagnostics are checked while a file is open
+and cleared when it closes. An empty array leaves all paths enabled. These
+settings can be used independently or together.
 
 Set both `error: true` and `errorWarning: true` to create a VS Code diagnostic.
 The whole comment text (starting at the tag, without leading whitespace) is
@@ -121,15 +144,16 @@ For example, use `# ccComment:disable-errors` in Python and
 in that file; comment colors and other styles remain active.
 
 The extension scans supported source files across the workspace when it
-starts, including files that are not currently open. To run the scan again,
-click **$(refresh) Warnings** in the status bar, use the refresh button on the
-**CC Warnings** sidebar, or run **ccComment: Refresh Warnings** from the
-Command Palette. The sidebar groups diagnostics by configured tag in severity
-order (red errors, blue information, then yellow warnings); selecting an entry
-opens the file at that comment. Creating or deleting supported files triggers
-a rescan, so removed files no longer leave stale warning counts. Git diff
-documents are ignored to avoid reporting the same file twice. The scan excludes
-`.git`, `node_modules`, `out`, `dist`, and `build` directories.
+starts, including files that are not currently open, except paths configured in
+`ccComment.ignoreAggressive`. To run the scan again, click **$(refresh)
+Warnings** in the status bar, use the refresh button on the **CC Warnings**
+sidebar, or run **ccComment: Refresh Warnings** from the Command Palette. The
+sidebar groups diagnostics by configured tag in severity order (red errors,
+blue information, then yellow warnings); selecting an entry opens the file at
+that comment. Creating or deleting supported files triggers a rescan, so
+removed files no longer leave stale warning counts. Git diff documents are
+ignored to avoid reporting the same file twice. The scan excludes `.git`,
+`node_modules`, `out`, `dist`, and `build` directories.
 
 - Your entries merge on top of the defaults (yours win on conflicts). Set
   `"ccComment.disableDefaultTags": true` to use only your own tags.

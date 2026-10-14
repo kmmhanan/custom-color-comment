@@ -1,4 +1,5 @@
 import * as vscode from "vscode";
+import * as path from "path";
 import { COMMENT_FILE_GLOB, commentTokensForLanguage } from "./languages";
 
 type ErrorColor = "blue" | "yellow" | "red";
@@ -69,6 +70,8 @@ let warningTreeProvider: WarningTreeProvider | undefined;
 let isWorkspaceScanRunning = false;
 let workspaceRefreshPromise: Promise<void> | undefined;
 let workspaceRefreshTimer: ReturnType<typeof setTimeout> | undefined;
+let ignoreWarningPatterns: string[] = [];
+let ignoreAggressivePatterns: string[] = [];
 const REFRESH_COMMAND = "customColorComment.refreshDiagnostics";
 const WARNING_VIEW_ID = "customColorComment.warnings";
 
@@ -253,10 +256,58 @@ function diagnosticSeverity(
 }
 
 function diagnosticMessage(tag: string, description: string): string {
-  const trimmedDescription = description.trim();
+  const trimmedDescription = description.trim().replace(/^:\s*/, "");
   return trimmedDescription
-    ? `${tag}: ${trimmedDescription}`
+    ? `${tag} : ${trimmedDescription}`
     : `${tag} comment`;
+}
+
+function globToRegExp(pattern: string): RegExp {
+  const normalized = pattern
+    .trim()
+    .replace(/\\/g, "/")
+    .replace(/^\.?\//, "");
+  if (!normalized) return /^(?!)$/;
+  const hasGlob = /[*?]/.test(normalized);
+  let expression = "^";
+
+  for (let index = 0; index < normalized.length; index++) {
+    const character = normalized[index];
+    if (character === "*" && normalized[index + 1] === "*") {
+      index++;
+      if (normalized[index + 1] === "/") {
+        expression += "(?:.*/)?";
+        index++;
+      } else {
+        expression += ".*";
+      }
+    } else if (character === "*") {
+      expression += "[^/]*";
+    } else if (character === "?") {
+      expression += "[^/]";
+    } else {
+      expression += character.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    }
+  }
+
+  if (!hasGlob) expression += "(?:/.*)?";
+  expression += "$";
+  return new RegExp(expression);
+}
+
+function matchesPathPatterns(
+  uri: vscode.Uri,
+  patterns: readonly string[],
+): boolean {
+  if (uri.scheme !== "file" || patterns.length === 0) return false;
+  const workspaceFolder = vscode.workspace.getWorkspaceFolder(uri);
+  if (!workspaceFolder) return false;
+
+  const relativePath = path
+    .relative(workspaceFolder.uri.fsPath, uri.fsPath)
+    .split(path.sep)
+    .join("/");
+  return patterns.some((pattern) => globToRegExp(pattern).test(relativePath));
 }
 
 // Word-like tags (TODO, FIXME, NOTE...) need a word boundary so "TODOING"
@@ -280,6 +331,8 @@ function loadConfig() {
   const config = vscode.workspace.getConfiguration("ccComment");
   const userTags = config.get<Record<string, TagValue>>("tags") || {};
   const disableDefaults = config.get<boolean>("disableDefaultTags") || false;
+  ignoreWarningPatterns = config.get<string[]>("ignoreWarning", []);
+  ignoreAggressivePatterns = config.get<string[]>("ignoreAggressive", []);
 
   const tags: Record<string, TagValue> = disableDefaults
     ? { ...userTags }
@@ -370,6 +423,7 @@ function updateDocument(doc: vscode.TextDocument, editor?: vscode.TextEditor) {
     return;
   }
   const disableErrors = hasDisableErrorsDirective(doc, tokens);
+  const ignoreWarnings = matchesPathPatterns(doc.uri, ignoreWarningPatterns);
 
   const matchesByTag: Map<string, vscode.Range[]> = new Map();
   for (const tag of decorationTypes.keys()) {
@@ -429,7 +483,12 @@ function updateDocument(doc: vscode.TextDocument, editor?: vscode.TextEditor) {
 
       const style = tagStyles.get(finalTag);
       const errorConfig = normaliseErrorStyle(style);
-      if (errorConfig.enabled && errorConfig.warning && !disableErrors) {
+      if (
+        errorConfig.enabled &&
+        errorConfig.warning &&
+        !disableErrors &&
+        !ignoreWarnings
+      ) {
         const severity = diagnosticSeverity(errorConfig.color);
         if (severity !== undefined) {
           const matchedTagStart =
@@ -503,7 +562,8 @@ function updateDocument(doc: vscode.TextDocument, editor?: vscode.TextEditor) {
               if (
                 errorConfig.enabled &&
                 errorConfig.warning &&
-                !disableErrors
+                !disableErrors &&
+                !ignoreWarnings
               ) {
                 const severity = diagnosticSeverity(errorConfig.color);
                 if (severity !== undefined) {
@@ -586,9 +646,12 @@ async function runWorkspaceDiagnosticsRefresh(): Promise<void> {
       try {
         diagnosticCollection?.clear();
         warningTreeProvider?.refresh();
-        const uris = await vscode.workspace.findFiles(
+        const foundUris = await vscode.workspace.findFiles(
           COMMENT_FILE_GLOB,
           "**/{.git,node_modules,out,dist,build}/**",
+        );
+        const uris = foundUris.filter(
+          (uri) => !matchesPathPatterns(uri, ignoreAggressivePatterns),
         );
         const documents = new Map<string, vscode.TextDocument>();
 
@@ -721,7 +784,10 @@ export function activate(context: vscode.ExtensionContext) {
       updateDocument(document);
     }),
     vscode.workspace.onDidCloseTextDocument((document) => {
-      if (document.uri.scheme !== "file") {
+      if (
+        document.uri.scheme !== "file" ||
+        matchesPathPatterns(document.uri, ignoreAggressivePatterns)
+      ) {
         diagnosticCollection?.delete(document.uri);
         warningTreeProvider?.refresh();
       }

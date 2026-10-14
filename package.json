@@ -2,7 +2,7 @@
   "name": "custom-color-comment",
   "displayName": "Custom Color Comment",
   "description": "Color comments based on custom tags like //! //? //TODO //////, fully configurable per-user via ccComment.tags in settings.json.",
-  "version": "1.0.4",
+  "version": "1.0.5",
   "publisher": "kmmhanan",
   "license": "MIT",
   "repository": {
@@ -157,6 +157,22 @@
           "type": "boolean",
           "default": false,
           "description": "If true, only your custom ccComment.tags are used (built-in defaults are not merged in)."
+        },
+        "ccComment.ignoreWarning": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "default": [],
+          "markdownDescription": "Workspace-relative glob paths where comment diagnostics are suppressed, equivalent to adding `ccComment:disable-errors` to each file. Comment coloring still applies. Example: `[\"ios/**\", \"macos/**\"]`."
+        },
+        "ccComment.ignoreAggressive": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "default": [],
+          "markdownDescription": "Workspace-relative glob paths excluded from background workspace scans. Diagnostics are checked while a matching file is open and cleared when it closes. Example: `[\"ios/**\", \"macos/**\"]`."
         }
       }
     }
