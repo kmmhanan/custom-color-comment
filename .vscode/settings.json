@@ -6,5 +6,36 @@
         "strikethrough",
         "TODOING",
         "vscodeignore"
-    ]
+    ],
+    "ccComment.tags": {
+        "!": "#FF0000",
+        "?": "#00FFFF",
+        "////": {
+            "color": "#999999",
+            "lineThrough": true,
+            "opacity": 0.9
+        },
+        "TODO": {
+            "color": "#00AEEF",
+            "error": true,
+            "errorColor": "blue",
+            "errorWarning": true
+        },
+        "WARN": {
+            "color": "#FFD700",
+            "backgroundColor": "#332200",
+            "backgroundOpacity": 0.4,
+            "italic": true,
+            "error": true,
+            "errorColor": "yellow",
+            "errorWarning": true
+        },
+        "BUG": {
+            "color": "#FF3B3B",
+            "bold": true,
+            "error": true,
+            "errorColor": "red",
+            "errorWarning": true
+        },
+    }
 }

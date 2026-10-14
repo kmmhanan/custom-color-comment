@@ -2,7 +2,7 @@
   "name": "custom-color-comment",
   "displayName": "Custom Color Comment",
   "description": "Color comments based on custom tags like //! //? //TODO //////, fully configurable per-user via ccComment.tags in settings.json.",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "publisher": "kmmhanan",
   "license": "MIT",
   "repository": {
@@ -40,7 +40,7 @@
         "ccComment.tags": {
           "type": "object",
           "default": {},
-          "markdownDescription": "Map of comment tags to a color (hex string) or a style object. Merged on top of the built-in defaults (yours win on conflicts). Example:\n```json\n\"ccComment.tags\": {\n  \"!\": \"#FF0000\",\n  \"?\": \"#121212\",\n  \"TODO\": { \"color\": \"#FFA500\", \"bold\": true },\n  \"WARN\": { \"color\": \"#FFD700\", \"backgroundColor\": \"#332200\", \"italic\": true }\n}\n```",
+          "markdownDescription": "Map of comment tags to a color (hex string) or a style object. Merged on top of the built-in defaults (yours win on conflicts). Example:\n```json\n\"ccComment.tags\": {\n  \"!\": \"#FF0000\",\n  \"?\": \"#121212\",\n  \"TODO\": { \"color\": \"#00AEEF\", \"error\": true, \"errorColor\": \"blue\", \"errorWarning\": true },\n  \"WARN\": { \"color\": \"#FFD700\", \"backgroundColor\": \"#332200\", \"backgroundOpacity\": 0.4, \"error\": true, \"errorColor\": \"yellow\", \"errorWarning\": true },\n  \"BUG\": { \"color\": \"#FF3B3B\", \"error\": true, \"errorColor\": \"red\", \"errorWarning\": true }\n}\n```\nSet both `error: true` and `errorWarning: true` to create a native VS Code diagnostic for the entire matched comment. `errorColor` selects its severity and native squiggle color: `\"blue\"` = Information, `\"yellow\"` = Warning, `\"red\"` = Error. The squiggle is produced by the diagnostic API, not a text decoration. Add `ccComment:disable-errors` as a comment on the first line of a file to suppress these diagnostics in that file.",
           "additionalProperties": {
             "anyOf": [
               {
@@ -58,6 +58,12 @@
                     "type": "string",
                     "description": "Hex color for the background"
                   },
+                  "backgroundOpacity": {
+                    "type": "number",
+                    "minimum": 0,
+                    "maximum": 1,
+                    "description": "Background opacity from 0 (transparent) to 1 (fully opaque). Requires backgroundColor."
+                  },
                   "bold": {
                     "type": "boolean"
                   },
@@ -73,6 +79,35 @@
                     "minimum": 0,
                     "maximum": 1,
                     "description": "Text opacity from 0 (invisible) to 1 (fully opaque)."
+                  },
+                  "error": {
+                    "anyOf": [
+                      {
+                        "type": "boolean"
+                      },
+                      {
+                        "type": "string",
+                        "enum": [
+                          "blue",
+                          "yellow",
+                          "red"
+                        ]
+                      }
+                    ],
+                    "description": "Enable diagnostics for this tag when combined with errorWarning. Defaults to a yellow diagnostic if errorColor is not specified. String values remain supported for backward compatibility."
+                  },
+                  "errorColor": {
+                    "type": "string",
+                    "enum": [
+                      "blue",
+                      "yellow",
+                      "red"
+                    ],
+                    "description": "Diagnostic severity and native squiggle color: blue = Information, yellow = Warning, red = Error. Defaults to yellow."
+                  },
+                  "errorWarning": {
+                    "type": "boolean",
+                    "description": "Create a native VS Code diagnostic and show the matched comment in the Problems panel. Requires error: true."
                   }
                 },
                 "additionalProperties": false

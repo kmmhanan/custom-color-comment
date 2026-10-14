@@ -1,0 +1,17 @@
+// Custom Color Comment samples — tag, readable message, and its default color.
+
+//!     : Critical - stop the release until this is resolved (#FF2D00).
+//?     : Question - should this branch handle an empty response? (#00FFFF)
+//^     : Caution - verify the migration before deploying (#EAF622).
+//*     : Success - the request completed and the cache is warm (#28FF00).
+//&     : Follow-up - share this improvement with the team (#FF06A0).
+//~     : Idea - consider extracting this into a reusable helper (#BE00FF).
+
+// NOTE : Keep this behavior documented for maintainers (#00BCD4).
+// HACK : Temporary workaround until the upstream fix is released (#E91E63).
+
+//// Archived example: this comment is gray, faded, and struck through (#888888).
+
+// WARN ~ This fallback may hide incomplete data (#FFD700; yellow Warning diagnostic).
+// TODO ~ Add validation for the incoming user settings (#00AEEF; blue Information diagnostic).
+// BUG  ~ Correct the retry loop before shipping (#FF3B3B; red Error diagnostic).

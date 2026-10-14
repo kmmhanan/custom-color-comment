@@ -15,9 +15,9 @@ and to work across virtually any language, not just `//`.
 
 ## ✨ Features
 
-- 🏷️ **Tag-based coloring** — `//! red`, `//? cyan`, `// TODO: orange`, `//// grayed-out strikethrough`
+- 🏷️ **Tag-based coloring** — `//! red`, `//? cyan`, `// TODO: blue`, `//// grayed-out strikethrough`
 - 🌍 **Any language** — Python's `#`, Lua's `--`, HTML's `<!-- -->`, block comments `/* */`, and more
-- 🎨 **Fully customizable** — color, background, bold, italic, line-through, opacity
+- 🎨 **Fully customizable** — text/background color and opacity, bold, italic, line-through, and colored wavy underlines
 - ⚡ **Sensible defaults** out of the box, override or extend anything via `settings.json`
 
 ---
@@ -48,20 +48,20 @@ Write a tag right after your comment marker:
 
 ## 🎨 Default Tags
 
-| Tag     | Style                                 |
-| ------- | ------------------------------------- |
-| `!`     | red (`#FF2D00`)                       |
-| `?`     | cyan (`#00FFFF`)                      |
-| `^`     | yellow (`#EAF622`)                    |
-| `*`     | green (`#28FF00`)                     |
-| `&`     | pink (`#FF06A0`)                      |
-| `~`     | purple (`#BE00FF`)                    |
-| `////`  | gray, line-through, 90% opacity       |
-| `todo`  | mustard (`#FF8C00`), case-insensitive |
-| `FIXME` | red, bold                             |
-| `NOTE`  | cyan (`#00BCD4`)                      |
-| `HACK`  | pink (`#E91E63`)                      |
-| `WARN`  | yellow, background, italic            |
+| Tag    | Style                                          |
+| ------ | ---------------------------------------------- |
+| `!`    | red (`#FF2D00`)                                |
+| `?`    | cyan (`#00FFFF`)                               |
+| `^`    | yellow (`#EAF622`)                             |
+| `*`    | green (`#28FF00`)                              |
+| `&`    | pink (`#FF06A0`)                               |
+| `~`    | purple (`#BE00FF`)                             |
+| `////` | gray, line-through, 90% opacity                |
+| `TODO` | blue (`#00AEEF`), Information diagnostic       |
+| `NOTE` | cyan (`#00BCD4`)                               |
+| `HACK` | pink (`#E91E63`)                               |
+| `WARN` | yellow, background, italic, Warning diagnostic |
+| `BUG`  | red, bold, Error diagnostic                    |
 
 > Plain, untagged `//` comments are left at your theme's normal comment
 > color by default — nothing greys them out unless you configure it.
@@ -73,23 +73,52 @@ Write a tag right after your comment marker:
 ```json
 "ccComment.tags": {
   "!": "#FF0000",
-  "?": "#121212",
-  "////": { "color": "#999999", "lineThrough": true, "opacity": 0.9 }
-  "TODO": { "color": "#FFA500", "bold": true },
-  "WARN": { "color": "#FFD700", "backgroundColor": "#332200", "italic": true },
+  "?": "#00FFFF",
+  "////": { "color": "#999999", "lineThrough": true, "opacity": 0.9 },
+  "TODO": { "color": "#00AEEF", "error": true, "errorColor": "blue", "errorWarning": true },
+  "WARN": {
+    "color": "#FFD700",
+    "backgroundColor": "#332200",
+    "backgroundOpacity": 0.4,
+    "italic": true,
+    "error": true,
+    "errorColor": "yellow",
+    "errorWarning": true
+  },
+  "BUG": { "color": "#FF3B3B", "bold": true, "error": true, "errorColor": "red", "errorWarning": true }
 }
 ```
 
 Each value is either a plain hex string, or an object with any of:
 
-| Property          | Type    | Effect                  |
-| ----------------- | ------- | ----------------------- |
-| `color`           | string  | text color (hex)        |
-| `backgroundColor` | string  | background color (hex)  |
-| `bold`            | boolean | bold text               |
-| `italic`          | boolean | italic text             |
-| `lineThrough`     | boolean | strikethrough           |
-| `opacity`         | number  | `0`–`1`, fades the text |
+| Property            | Type    | Effect                                                        |
+| ------------------- | ------- | ------------------------------------------------------------- |
+| `color`             | string  | text color (hex)                                              |
+| `backgroundColor`   | string  | background color (hex)                                        |
+| `backgroundOpacity` | number  | background transparency, `0`–`1` (requires `backgroundColor`) |
+| `bold`              | boolean | bold text                                                     |
+| `italic`            | boolean | italic text                                                   |
+| `lineThrough`       | boolean | strikethrough                                                 |
+| `opacity`           | number  | `0`–`1`, fades the text                                       |
+| `error`             | boolean | enable diagnostics for this tag                               |
+| `errorColor`        | string  | `"blue"` = Information, `"yellow"` = Warning, `"red"` = Error |
+| `errorWarning`      | boolean | create a native VS Code diagnostic and show it in Problems    |
+
+Set both `error: true` and `errorWarning: true` to create a VS Code diagnostic.
+The whole comment text (starting at the tag, without leading whitespace) is
+the diagnostic range. VS Code supplies the native squiggle and its severity
+color; the extension does not draw a styled underline. Since native squiggles
+come from diagnostics, they are also listed in the **Problems** panel. To
+suppress these diagnostics for a single file, put this directive on its first
+line using that language's comment syntax:
+
+```js
+// ccComment:disable-errors
+```
+
+For example, use `# ccComment:disable-errors` in Python and
+`<!-- ccComment:disable-errors -->` in HTML. This only suppresses diagnostics
+in that file; comment colors and other styles remain active.
 
 - Your entries merge on top of the defaults (yours win on conflicts). Set
   `"ccComment.disableDefaultTags": true` to use only your own tags.
