@@ -1,14 +1,4 @@
 {
-    "cSpell.words": [
-        "applescript",
-        "glsl",
-        "hlsl",
-        "rescan",
-        "rescans",
-        "strikethrough",
-        "TODOING",
-        "vscodeignore"
-    ],
     "ccComment.tags": {
         "!": "#FF0000",
         "?": "#00FFFF",
@@ -39,5 +29,16 @@
             "errorColor": "red",
             "errorWarning": true
         },
-    }
+    },
+    "cSpell.words": [
+        "applescript",
+        "glsl",
+        "hlsl",
+        "rescan",
+        "rescanning",
+        "rescans",
+        "strikethrough",
+        "TODOING",
+        "vscodeignore"
+    ],
 }

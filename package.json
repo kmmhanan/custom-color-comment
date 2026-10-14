@@ -2,7 +2,7 @@
   "name": "custom-color-comment",
   "displayName": "Custom Color Comment",
   "description": "Color comments based on custom tags like //! //? //TODO //////, fully configurable per-user via ccComment.tags in settings.json.",
-  "version": "1.0.5",
+  "version": "1.0.6",
   "publisher": "kmmhanan",
   "license": "MIT",
   "repository": {
@@ -172,7 +172,7 @@
             "type": "string"
           },
           "default": [],
-          "markdownDescription": "Workspace-relative glob paths excluded from background workspace scans. Diagnostics are checked while a matching file is open and cleared when it closes. Example: `[\"ios/**\", \"macos/**\"]`."
+          "markdownDescription": "Additional workspace-relative glob paths excluded from background workspace scans and automatic file-created rescans. Common generated and dependency folders are detected from project manifests automatically. Diagnostics in these manually excluded paths are checked while a matching file is open and cleared when it closes. Example: `[\"generated/**\"]`."
         }
       }
     }

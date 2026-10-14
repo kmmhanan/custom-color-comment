@@ -74,6 +74,70 @@ let ignoreWarningPatterns: string[] = [];
 let ignoreAggressivePatterns: string[] = [];
 const REFRESH_COMMAND = "customColorComment.refreshDiagnostics";
 const WARNING_VIEW_ID = "customColorComment.warnings";
+const WORKSPACE_SCAN_EXCLUDE_GLOB =
+  "**/{.git,node_modules,out,dist,build}/**";
+const WORKSPACE_SCAN_EXCLUDED_DIRECTORIES = new Set([
+  ".git",
+  "node_modules",
+  "out",
+  "dist",
+  "build",
+]);
+const PROJECT_EXCLUSION_PROFILES = [
+  {
+    name: "flutter",
+    markerGlob: "**/pubspec.yaml",
+    directories: [
+      ".packages",
+      ".dart_tool",
+      "Pods",
+      "android",
+      "ios",
+      "macos",
+      "windows",
+      "linux",
+    ],
+  },
+  {
+    name: "node",
+    markerGlob: "**/package.json",
+    directories: [".next", ".turbo", "coverage"],
+  },
+  {
+    name: "python",
+    markerGlob: "**/{pyproject.toml,setup.py,requirements.txt}",
+    directories: ["__pycache__", ".pytest_cache", ".mypy_cache", ".ruff_cache", ".venv", "venv"],
+  },
+  {
+    name: "rust",
+    markerGlob: "**/Cargo.toml",
+    directories: ["target"],
+  },
+  {
+    name: "go",
+    markerGlob: "**/go.mod",
+    directories: ["vendor"],
+  },
+  {
+    name: "java",
+    markerGlob: "**/{pom.xml,build.gradle,build.gradle.kts}",
+    directories: [".gradle", "target"],
+  },
+  {
+    name: "dotnet",
+    markerGlob: "**/*.{csproj,sln}",
+    directories: ["bin", "obj"],
+  },
+  {
+    name: "swift",
+    markerGlob: "**/Package.swift",
+    directories: [".build"],
+  },
+] as const;
+let detectedProjectExclusions: Array<{
+  root: string;
+  directories: Set<string>;
+}> = [];
 
 type WarningTreeNode =
   | { kind: "tag"; tag: string; diagnostics: vscode.Diagnostic[] }
@@ -310,6 +374,77 @@ function matchesPathPatterns(
   return patterns.some((pattern) => globToRegExp(pattern).test(relativePath));
 }
 
+function isExcludedFromWorkspaceScan(uri: vscode.Uri): boolean {
+  if (uri.scheme !== "file") return true;
+  const workspaceFolder = vscode.workspace.getWorkspaceFolder(uri);
+  if (!workspaceFolder) return false;
+
+  const relativePath = path
+    .relative(workspaceFolder.uri.fsPath, uri.fsPath)
+    .split(path.sep);
+  if (
+    relativePath.some((segment) =>
+      WORKSPACE_SCAN_EXCLUDED_DIRECTORIES.has(segment),
+    )
+  ) {
+    return true;
+  }
+
+  return detectedProjectExclusions.some(({ root, directories }) => {
+    const projectRelativePath = path.relative(root, uri.fsPath);
+    if (
+      projectRelativePath.startsWith(`..${path.sep}`) ||
+      path.isAbsolute(projectRelativePath)
+    ) {
+      return false;
+    }
+    const projectSegments = projectRelativePath.split(path.sep);
+    return directories.has(projectSegments[0]);
+  });
+}
+
+function shouldRescanForFile(uri: vscode.Uri): boolean {
+  return (
+    !isExcludedFromWorkspaceScan(uri) &&
+    !matchesPathPatterns(uri, ignoreAggressivePatterns)
+  );
+}
+
+async function detectProjectExclusions(): Promise<void> {
+  const exclude = WORKSPACE_SCAN_EXCLUDE_GLOB;
+  const discovered = new Map<string, Set<string>>();
+  const markerResults = await Promise.all(
+    PROJECT_EXCLUSION_PROFILES.map(async (profile) => ({
+      profile,
+      uris: await vscode.workspace.findFiles(profile.markerGlob, exclude),
+    })),
+  );
+
+  for (const { profile, uris } of markerResults) {
+    for (const uri of uris) {
+      if (
+        profile.name === "flutter" &&
+        !/sdk:\s*flutter\b/.test(
+          Buffer.from(await vscode.workspace.fs.readFile(uri)).toString("utf8"),
+        )
+      ) {
+        continue;
+      }
+
+      const root = path.dirname(uri.fsPath);
+      const directories = discovered.get(root) ?? new Set<string>();
+      for (const directory of profile.directories) {
+        directories.add(directory);
+      }
+      discovered.set(root, directories);
+    }
+  }
+
+  detectedProjectExclusions = [...discovered.entries()].map(
+    ([root, directories]) => ({ root, directories }),
+  );
+}
+
 // Word-like tags (TODO, FIXME, NOTE...) need a word boundary so "TODOING"
 // doesn't falsely match. Symbol tags (!, ?, *, ////) match immediately.
 function isWordTag(tag: string): boolean {
@@ -415,6 +550,11 @@ function hasDisableErrorsDirective(
 
 function updateDocument(doc: vscode.TextDocument, editor?: vscode.TextEditor) {
   if (doc.uri.scheme === "git") return;
+  if (isExcludedFromWorkspaceScan(doc.uri)) {
+    diagnosticCollection?.delete(doc.uri);
+    if (!isWorkspaceScanRunning) warningTreeProvider?.refresh();
+    return;
+  }
 
   const tokens = commentTokensForLanguage(doc.languageId);
   if (!tokens) {
@@ -629,7 +769,7 @@ function scheduleWorkspaceDiagnosticsRefresh(): void {
         "Custom Color Comment could not refresh diagnostics after workspace files changed. See the Extension Host log for details.",
       );
     });
-  }, 250);
+  }, 1000);
 }
 
 async function runWorkspaceDiagnosticsRefresh(): Promise<void> {
@@ -644,14 +784,17 @@ async function runWorkspaceDiagnosticsRefresh(): Promise<void> {
     async (progress) => {
       isWorkspaceScanRunning = true;
       try {
+        await detectProjectExclusions();
         diagnosticCollection?.clear();
         warningTreeProvider?.refresh();
         const foundUris = await vscode.workspace.findFiles(
           COMMENT_FILE_GLOB,
-          "**/{.git,node_modules,out,dist,build}/**",
+          WORKSPACE_SCAN_EXCLUDE_GLOB,
         );
         const uris = foundUris.filter(
-          (uri) => !matchesPathPatterns(uri, ignoreAggressivePatterns),
+          (uri) =>
+            !isExcludedFromWorkspaceScan(uri) &&
+            !matchesPathPatterns(uri, ignoreAggressivePatterns),
         );
         const documents = new Map<string, vscode.TextDocument>();
 
@@ -756,8 +899,15 @@ export function activate(context: vscode.ExtensionContext) {
     );
     context.subscriptions.push(
       watcher,
-      watcher.onDidCreate(scheduleWorkspaceDiagnosticsRefresh),
-      watcher.onDidDelete(scheduleWorkspaceDiagnosticsRefresh),
+      watcher.onDidCreate((uri) => {
+        if (shouldRescanForFile(uri)) {
+          scheduleWorkspaceDiagnosticsRefresh();
+        }
+      }),
+      watcher.onDidDelete((uri) => {
+        diagnosticCollection?.delete(uri);
+        warningTreeProvider?.refresh();
+      }),
     );
   }
 

@@ -119,13 +119,21 @@ This suppresses comment diagnostics for files under `ios` (like the
 `ccComment:disable-errors` directive), while keeping comment colors active.
 
 ```json
-"ccComment.ignoreAggressive": ["ios/**", "macos/**"]
+"ccComment.ignoreAggressive": ["generated/**"]
 ```
 
 This keeps those paths out of background workspace scans, including startup and
-file create/delete rescans. Their diagnostics are checked while a file is open
-and cleared when it closes. An empty array leaves all paths enabled. These
-settings can be used independently or together.
+file-created rescans. Their diagnostics are checked while a file is open and
+cleared when it closes. An empty array leaves all paths enabled. These settings
+can be used independently or together.
+
+The extension also detects common project manifests and automatically skips
+generated/dependency folders for that project type. For example, Flutter
+projects skip their native platform scaffolding and Dart build data, Python
+projects skip caches and virtual environments, and Rust projects skip `target`.
+These folder names are scoped to detected projects, so a directory such as
+`ios` in an unrelated project is still scanned. Use
+`ccComment.ignoreAggressive` for additional project-specific paths.
 
 Set both `error: true` and `errorWarning: true` to create a VS Code diagnostic.
 The whole comment text (starting at the tag, without leading whitespace) is
@@ -152,8 +160,11 @@ sidebar groups diagnostics by configured tag in severity order (red errors,
 blue information, then yellow warnings); selecting an entry opens the file at
 that comment. Creating or deleting supported files triggers a rescan, so
 removed files no longer leave stale warning counts. Git diff documents are
-ignored to avoid reporting the same file twice. The scan excludes `.git`,
-`node_modules`, `out`, `dist`, and `build` directories.
+ignored to avoid reporting the same file twice. The scan and automatic
+file-created rescans skip common build folders and project-type-specific
+generated or dependency folders, so build output does not repeatedly trigger
+workspace scans. Deleted files have their diagnostics removed directly without
+rescanning the workspace.
 
 - Your entries merge on top of the defaults (yours win on conflicts). Set
   `"ccComment.disableDefaultTags": true` to use only your own tags.
