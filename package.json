@@ -2,7 +2,7 @@
   "name": "custom-color-comment",
   "displayName": "Custom Color Comment",
   "description": "Color comments based on custom tags like //! //? //TODO //////, fully configurable per-user via ccComment.tags in settings.json.",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "publisher": "kmmhanan",
   "license": "MIT",
   "repository": {
@@ -33,6 +33,44 @@
   ],
   "main": "./out/extension.js",
   "contributes": {
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "customColorComment",
+          "title": "CC Warnings",
+          "icon": "resources/cc-icon.svg"
+        }
+      ]
+    },
+    "views": {
+      "customColorComment": [
+        {
+          "id": "customColorComment.warnings",
+          "name": "CC Warnings",
+          "icon": "resources/cc-icon.svg"
+        }
+      ]
+    },
+    "commands": [
+      {
+        "command": "customColorComment.refreshDiagnostics",
+        "title": "Refresh Warnings",
+        "category": "ccComment",
+        "icon": {
+          "light": "resources/refresh-light.svg",
+          "dark": "resources/refresh-dark.svg"
+        }
+      }
+    ],
+    "menus": {
+      "view/title": [
+        {
+          "command": "customColorComment.refreshDiagnostics",
+          "when": "view == customColorComment.warnings",
+          "group": "navigation"
+        }
+      ]
+    },
     "configuration": {
       "type": "object",
       "title": "Custom Color Comment",

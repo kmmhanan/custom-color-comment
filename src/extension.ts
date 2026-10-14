@@ -1,5 +1,5 @@
 import * as vscode from "vscode";
-import { commentTokensForLanguage } from "./languages";
+import { COMMENT_FILE_GLOB, commentTokensForLanguage } from "./languages";
 
 type ErrorColor = "blue" | "yellow" | "red";
 
@@ -65,6 +65,133 @@ let tagRegexes: { tag: string; regex: RegExp }[] = [];
 const tagStyles: Map<string, TagStyle> = new Map();
 let debounceTimer: ReturnType<typeof setTimeout> | undefined;
 let diagnosticCollection: vscode.DiagnosticCollection | undefined;
+let warningTreeProvider: WarningTreeProvider | undefined;
+let isWorkspaceScanRunning = false;
+let workspaceRefreshPromise: Promise<void> | undefined;
+let workspaceRefreshTimer: ReturnType<typeof setTimeout> | undefined;
+const REFRESH_COMMAND = "customColorComment.refreshDiagnostics";
+const WARNING_VIEW_ID = "customColorComment.warnings";
+
+type WarningTreeNode =
+  | { kind: "tag"; tag: string; diagnostics: vscode.Diagnostic[] }
+  | {
+      kind: "diagnostic";
+      uri: vscode.Uri;
+      diagnostic: vscode.Diagnostic;
+    };
+
+class WarningTreeProvider
+  implements vscode.TreeDataProvider<WarningTreeNode>
+{
+  private readonly changeEmitter =
+    new vscode.EventEmitter<WarningTreeNode | undefined>();
+  readonly onDidChangeTreeData = this.changeEmitter.event;
+
+  refresh(): void {
+    this.changeEmitter.fire(undefined);
+  }
+
+  private getDiagnosticEntries(): Array<
+    [vscode.Uri, readonly vscode.Diagnostic[]]
+  > {
+    const entries: Array<[vscode.Uri, readonly vscode.Diagnostic[]]> = [];
+    diagnosticCollection?.forEach((uri, diagnostics) => {
+      entries.push([uri, diagnostics]);
+    });
+    return entries;
+  }
+
+  getTreeItem(element: WarningTreeNode): vscode.TreeItem {
+    if (element.kind === "tag") {
+      const item = new vscode.TreeItem(
+        `${element.tag} (${element.diagnostics.length})`,
+        vscode.TreeItemCollapsibleState.Expanded,
+      );
+      const severity = element.diagnostics[0]?.severity;
+      item.iconPath =
+        severity === vscode.DiagnosticSeverity.Error
+          ? new vscode.ThemeIcon("error")
+          : severity === vscode.DiagnosticSeverity.Information
+            ? new vscode.ThemeIcon("info")
+            : new vscode.ThemeIcon("warning");
+      item.contextValue = "ccCommentTag";
+      return item;
+    }
+
+    const { uri, diagnostic } = element;
+    const item = new vscode.TreeItem(
+      diagnostic.message,
+      vscode.TreeItemCollapsibleState.None,
+    );
+    item.description = `${vscode.workspace.asRelativePath(uri, false)}:${diagnostic.range.start.line + 1}`;
+    item.tooltip = `${uri.fsPath}:${diagnostic.range.start.line + 1}`;
+    item.resourceUri = uri;
+    item.contextValue = "ccCommentWarning";
+    item.command = {
+      command: "vscode.open",
+      title: "Open Warning",
+      arguments: [
+        uri,
+        {
+          selection: diagnostic.range,
+          preview: true,
+        } satisfies vscode.TextDocumentShowOptions,
+      ],
+    };
+    return item;
+  }
+
+  getChildren(element?: WarningTreeNode): WarningTreeNode[] {
+    if (element?.kind === "diagnostic") return [];
+    if (element?.kind === "tag") {
+      const entries = this.getDiagnosticEntries();
+      return entries
+        .flatMap(([uri, diagnostics]) =>
+          diagnostics
+            .filter((diagnostic) => diagnostic.code === element.tag)
+            .map((diagnostic) => ({
+              kind: "diagnostic" as const,
+              uri,
+              diagnostic,
+            })),
+        )
+        .sort((a, b) => a.uri.toString().localeCompare(b.uri.toString()));
+    }
+
+    const byTag = new Map<string, vscode.Diagnostic[]>();
+    for (const [, diagnostics] of this.getDiagnosticEntries()) {
+      for (const diagnostic of diagnostics) {
+        const diagnosticCode = diagnostic.code;
+        const tag =
+          typeof diagnosticCode === "string"
+            ? diagnosticCode
+            : typeof diagnosticCode === "object"
+              ? diagnosticCode.value
+              : undefined;
+        if (typeof tag !== "string") continue;
+        const taggedDiagnostics = byTag.get(tag) ?? [];
+        taggedDiagnostics.push(diagnostic);
+        byTag.set(tag, taggedDiagnostics);
+      }
+    }
+
+    const severityOrder = (severity: vscode.DiagnosticSeverity): number => {
+      if (severity === vscode.DiagnosticSeverity.Error) return 0;
+      if (severity === vscode.DiagnosticSeverity.Information) return 1;
+      if (severity === vscode.DiagnosticSeverity.Warning) return 2;
+      return 3;
+    };
+
+    return [...byTag.entries()]
+      .map(([tag, diagnostics]) => ({ kind: "tag" as const, tag, diagnostics }))
+      .sort((a, b) => {
+        const severityDifference =
+          severityOrder(a.diagnostics[0].severity) -
+          severityOrder(b.diagnostics[0].severity);
+        return severityDifference || a.tag.localeCompare(b.tag);
+      });
+  }
+}
 
 function escapeRegex(s: string): string {
   return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
@@ -76,7 +203,9 @@ function colorWithOpacity(color: string, opacity: number): string {
     const channels =
       hex.length === 3
         ? hex.split("").map((channel) => parseInt(channel + channel, 16))
-        : [0, 2, 4].map((offset) => parseInt(hex.slice(offset, offset + 2), 16));
+        : [0, 2, 4].map((offset) =>
+            parseInt(hex.slice(offset, offset + 2), 16),
+          );
     return `rgba(${channels.join(", ")}, ${opacity})`;
   }
 
@@ -91,9 +220,11 @@ function colorWithOpacity(color: string, opacity: number): string {
   return `color-mix(in srgb, ${color} ${opacity * 100}%, transparent)`;
 }
 
-function normaliseErrorStyle(
-  style: TagStyle | undefined,
-): { enabled: boolean; color: ErrorColor; warning: boolean } {
+function normaliseErrorStyle(style: TagStyle | undefined): {
+  enabled: boolean;
+  color: ErrorColor;
+  warning: boolean;
+} {
   if (!style) {
     return { enabled: false, color: "yellow", warning: false };
   }
@@ -106,9 +237,9 @@ function normaliseErrorStyle(
   return { enabled, color, warning };
 }
 
-function diagnosticSeverity(error: ErrorColor | undefined):
-  | vscode.DiagnosticSeverity
-  | undefined {
+function diagnosticSeverity(
+  error: ErrorColor | undefined,
+): vscode.DiagnosticSeverity | undefined {
   switch (error) {
     case "blue":
       return vscode.DiagnosticSeverity.Information;
@@ -229,13 +360,13 @@ function hasDisableErrorsDirective(
   return false;
 }
 
-function updateDocument(
-  doc: vscode.TextDocument,
-  editor?: vscode.TextEditor,
-) {
+function updateDocument(doc: vscode.TextDocument, editor?: vscode.TextEditor) {
+  if (doc.uri.scheme === "git") return;
+
   const tokens = commentTokensForLanguage(doc.languageId);
   if (!tokens) {
     diagnosticCollection?.set(doc.uri, []);
+    if (!isWorkspaceScanRunning) warningTreeProvider?.refresh();
     return;
   }
   const disableErrors = hasDisableErrorsDirective(doc, tokens);
@@ -311,12 +442,7 @@ function updateDocument(
                 (afterToken.length - trimmedAfter.length);
 
           const diagnostic = new vscode.Diagnostic(
-            new vscode.Range(
-              i,
-              matchedTagStart,
-              i,
-              lineText.trimEnd().length,
-            ),
+            new vscode.Range(i, matchedTagStart, i, lineText.trimEnd().length),
             diagnosticMessage(
               finalTag,
               lineText.slice(matchedTagStart + finalTag.length),
@@ -374,7 +500,11 @@ function updateDocument(
               matchesByTag.get(tag)!.push(range);
 
               const errorConfig = normaliseErrorStyle(tagStyles.get(tag));
-              if (errorConfig.enabled && errorConfig.warning && !disableErrors) {
+              if (
+                errorConfig.enabled &&
+                errorConfig.warning &&
+                !disableErrors
+              ) {
                 const severity = diagnosticSeverity(errorConfig.color);
                 if (severity !== undefined) {
                   const diagnosticRange = new vscode.Range(
@@ -410,6 +540,7 @@ function updateDocument(
   }
 
   diagnosticCollection?.set(doc.uri, diagnostics);
+  if (!isWorkspaceScanRunning) warningTreeProvider?.refresh();
 }
 
 function scheduleUpdate(editor: vscode.TextEditor | undefined) {
@@ -419,19 +550,160 @@ function scheduleUpdate(editor: vscode.TextEditor | undefined) {
   }, 150);
 }
 
+function refreshWorkspaceDiagnostics(): Promise<void> {
+  if (workspaceRefreshPromise) return workspaceRefreshPromise;
+
+  workspaceRefreshPromise = runWorkspaceDiagnosticsRefresh().finally(() => {
+    workspaceRefreshPromise = undefined;
+  });
+  return workspaceRefreshPromise;
+}
+
+function scheduleWorkspaceDiagnosticsRefresh(): void {
+  if (workspaceRefreshTimer) clearTimeout(workspaceRefreshTimer);
+  workspaceRefreshTimer = setTimeout(() => {
+    workspaceRefreshTimer = undefined;
+    void refreshWorkspaceDiagnostics().catch((error: unknown) => {
+      console.error("Custom Color Comment file rescan failed:", error);
+      void vscode.window.showErrorMessage(
+        "Custom Color Comment could not refresh diagnostics after workspace files changed. See the Extension Host log for details.",
+      );
+    });
+  }, 250);
+}
+
+async function runWorkspaceDiagnosticsRefresh(): Promise<void> {
+  if (!diagnosticCollection) return;
+
+  await vscode.window.withProgress(
+    {
+      location: vscode.ProgressLocation.Notification,
+      title: "Refreshing Custom Color Comment diagnostics",
+      cancellable: false,
+    },
+    async (progress) => {
+      isWorkspaceScanRunning = true;
+      try {
+        diagnosticCollection?.clear();
+        warningTreeProvider?.refresh();
+        const uris = await vscode.workspace.findFiles(
+          COMMENT_FILE_GLOB,
+          "**/{.git,node_modules,out,dist,build}/**",
+        );
+        const documents = new Map<string, vscode.TextDocument>();
+
+        for (const document of vscode.workspace.textDocuments) {
+          if (document.uri.scheme !== "git") {
+            documents.set(document.uri.toString(), document);
+          }
+        }
+
+        let failedCount = 0;
+        const batchSize = 32;
+        for (let start = 0; start < uris.length; start += batchSize) {
+          const batch = uris.slice(start, start + batchSize);
+          const results = await Promise.allSettled(
+            batch.map((uri) => vscode.workspace.openTextDocument(uri)),
+          );
+
+          for (let index = 0; index < results.length; index++) {
+            const result = results[index];
+            if (result.status === "fulfilled") {
+              documents.set(result.value.uri.toString(), result.value);
+            } else {
+              failedCount++;
+              console.error(
+                `Custom Color Comment could not open ${batch[index].toString()}:`,
+                result.reason,
+              );
+            }
+          }
+
+          progress.report({
+            message: `${Math.min(start + batch.length, uris.length)} / ${uris.length} files`,
+            increment: uris.length
+              ? (batch.length / uris.length) * 100
+              : undefined,
+          });
+        }
+
+        const activeEditor = vscode.window.activeTextEditor;
+        for (const document of documents.values()) {
+          updateDocument(
+            document,
+            activeEditor?.document === document ? activeEditor : undefined,
+          );
+        }
+
+        if (failedCount > 0) {
+          void vscode.window.showWarningMessage(
+            `Custom Color Comment could not scan ${failedCount} workspace file(s). See the Extension Host log for details.`,
+          );
+        }
+      } finally {
+        isWorkspaceScanRunning = false;
+        warningTreeProvider?.refresh();
+      }
+    },
+  );
+}
+
 export function activate(context: vscode.ExtensionContext) {
   diagnosticCollection = vscode.languages.createDiagnosticCollection(
     "custom-color-comment",
   );
   context.subscriptions.push(diagnosticCollection);
+  warningTreeProvider = new WarningTreeProvider();
+  context.subscriptions.push(
+    vscode.window.registerTreeDataProvider(
+      WARNING_VIEW_ID,
+      warningTreeProvider,
+    ),
+  );
   loadConfig();
-  const activeEditor = vscode.window.activeTextEditor;
-  for (const document of vscode.workspace.textDocuments) {
-    updateDocument(
-      document,
-      activeEditor?.document === document ? activeEditor : undefined,
+  context.subscriptions.push(
+    vscode.commands.registerCommand(REFRESH_COMMAND, async () => {
+      try {
+        await refreshWorkspaceDiagnostics();
+        void vscode.window.showInformationMessage(
+          "Custom Color Comment diagnostics refreshed.",
+        );
+      } catch (error) {
+        console.error("Custom Color Comment refresh failed:", error);
+        void vscode.window.showErrorMessage(
+          "Custom Color Comment could not refresh workspace diagnostics. See the Extension Host log for details.",
+        );
+      }
+    }),
+  );
+  const refreshStatusBar = vscode.window.createStatusBarItem(
+    vscode.StatusBarAlignment.Right,
+    100,
+  );
+  refreshStatusBar.name = "ccComment: Refresh Warnings";
+  refreshStatusBar.text = "$(refresh)";
+  refreshStatusBar.tooltip = "ccComment: Refresh Warnings";
+  refreshStatusBar.command = REFRESH_COMMAND;
+  refreshStatusBar.show();
+  context.subscriptions.push(refreshStatusBar);
+
+  for (const folder of vscode.workspace.workspaceFolders ?? []) {
+    const watcher = vscode.workspace.createFileSystemWatcher(
+      new vscode.RelativePattern(folder, COMMENT_FILE_GLOB),
+    );
+    context.subscriptions.push(
+      watcher,
+      watcher.onDidCreate(scheduleWorkspaceDiagnosticsRefresh),
+      watcher.onDidDelete(scheduleWorkspaceDiagnosticsRefresh),
     );
   }
+
+  void refreshWorkspaceDiagnostics().catch((error: unknown) => {
+    console.error("Custom Color Comment initial scan failed:", error);
+    void vscode.window.showErrorMessage(
+      "Custom Color Comment could not scan workspace diagnostics. See the Extension Host log for details.",
+    );
+  });
 
   context.subscriptions.push(
     vscode.window.onDidChangeActiveTextEditor((editor) =>
@@ -449,25 +721,32 @@ export function activate(context: vscode.ExtensionContext) {
       updateDocument(document);
     }),
     vscode.workspace.onDidCloseTextDocument((document) => {
-      diagnosticCollection?.delete(document.uri);
+      if (document.uri.scheme !== "file") {
+        diagnosticCollection?.delete(document.uri);
+        warningTreeProvider?.refresh();
+      }
     }),
     vscode.workspace.onDidChangeConfiguration((e) => {
       if (e.affectsConfiguration("ccComment")) {
         loadConfig();
-        const activeEditor = vscode.window.activeTextEditor;
-        for (const document of vscode.workspace.textDocuments) {
-          updateDocument(
-            document,
-            activeEditor?.document === document ? activeEditor : undefined,
+        void refreshWorkspaceDiagnostics().catch((error: unknown) => {
+          console.error(
+            "Custom Color Comment configuration rescan failed:",
+            error,
           );
-        }
+          void vscode.window.showErrorMessage(
+            "Custom Color Comment could not refresh diagnostics after a settings change. See the Extension Host log for details.",
+          );
+        });
       }
     }),
   );
 }
 
 export function deactivate() {
+  if (workspaceRefreshTimer) clearTimeout(workspaceRefreshTimer);
   disposeAllDecorations();
   diagnosticCollection?.dispose();
   diagnosticCollection = undefined;
+  warningTreeProvider = undefined;
 }

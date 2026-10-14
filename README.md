@@ -120,6 +120,17 @@ For example, use `# ccComment:disable-errors` in Python and
 `<!-- ccComment:disable-errors -->` in HTML. This only suppresses diagnostics
 in that file; comment colors and other styles remain active.
 
+The extension scans supported source files across the workspace when it
+starts, including files that are not currently open. To run the scan again,
+click **$(refresh) Warnings** in the status bar, use the refresh button on the
+**CC Warnings** sidebar, or run **ccComment: Refresh Warnings** from the
+Command Palette. The sidebar groups diagnostics by configured tag in severity
+order (red errors, blue information, then yellow warnings); selecting an entry
+opens the file at that comment. Creating or deleting supported files triggers
+a rescan, so removed files no longer leave stale warning counts. Git diff
+documents are ignored to avoid reporting the same file twice. The scan excludes
+`.git`, `node_modules`, `out`, `dist`, and `build` directories.
+
 - Your entries merge on top of the defaults (yours win on conflicts). Set
   `"ccComment.disableDefaultTags": true` to use only your own tags.
 - Letter tags (like `TODO`) match as a whole word, so `TODOING` won't

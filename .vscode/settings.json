@@ -3,6 +3,7 @@
         "applescript",
         "glsl",
         "hlsl",
+        "rescan",
         "strikethrough",
         "TODOING",
         "vscodeignore"

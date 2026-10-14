@@ -8,6 +8,9 @@ export interface CommentTokens {
   blockComments: BlockComment[];
 }
 
+export const COMMENT_FILE_GLOB =
+  "**/*.{js,jsx,mjs,cjs,ts,tsx,mts,cts,jsonc,java,c,cc,cpp,cxx,h,hpp,cs,go,rs,swift,kt,kts,scala,dart,groovy,m,mm,php,css,scss,less,shader,glsl,hlsl,py,pyw,rb,sh,bash,zsh,yml,yaml,toml,pl,ps1,coffee,mk,r,ex,exs,cr,nim,jl,lua,sql,hs,elm,ada,applescript,html,htm,xml,md,vue,svelte,clj,lisp,scm,ini,s,asm,erl,tex,bat,cmd,fs,fsx,vb,pas,pp,code}";
+
 const SLASH_STYLE: CommentTokens = {
   lineComments: ["//"],
   blockComments: [{ start: "/*", end: "*/" }],
