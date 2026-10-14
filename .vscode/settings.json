@@ -4,6 +4,7 @@
         "glsl",
         "hlsl",
         "rescan",
+        "rescans",
         "strikethrough",
         "TODOING",
         "vscodeignore"
