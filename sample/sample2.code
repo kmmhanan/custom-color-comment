@@ -1,0 +1,5 @@
+// TODO ~ Add validation for the incoming user settings (#00AEEF; blue Information diagnostic).
+// TODO ~ Add unit tests for the comment parser.
+// TODO ~ Handle network timeouts when loading remote configuration.
+// TODO ~ Document the supported tag options in the README.
+// TODO ~ Remove temporary logging before the next release.
