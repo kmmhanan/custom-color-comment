@@ -88,8 +88,14 @@ Write a tag right after your comment marker:
   "BUG": { "color": "#FF3B3B", "bold": true, "error": true, "errorColor": "red", "errorWarning": true }
 },
 "ccComment.ignoreWarning": [],
-"ccComment.ignoreAggressive": ["ios/**", "macos/**"]
+"ccComment.ignoreAggressive": ["ios/**", "macos/**"],
+"ccComment.showProblemCount": true
 ```
+
+The **CC Warnings** activity bar icon shows the total number of diagnostics
+created by this extension. Set `"ccComment.showProblemCount": false` to hide the
+badge. This only affects the sidebar badge; VS Code's Problems panel continues
+to show problems from all sources.
 
 Each value is either a plain hex string, or an object with any of:
 

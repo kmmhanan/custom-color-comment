@@ -67,6 +67,7 @@ const tagStyles: Map<string, TagStyle> = new Map();
 let debounceTimer: ReturnType<typeof setTimeout> | undefined;
 let diagnosticCollection: vscode.DiagnosticCollection | undefined;
 let warningTreeProvider: WarningTreeProvider | undefined;
+let warningTreeView: vscode.TreeView<WarningTreeNode> | undefined;
 let isWorkspaceScanRunning = false;
 let workspaceRefreshPromise: Promise<void> | undefined;
 let workspaceRefreshTimer: ReturnType<typeof setTimeout> | undefined;
@@ -74,8 +75,7 @@ let ignoreWarningPatterns: string[] = [];
 let ignoreAggressivePatterns: string[] = [];
 const REFRESH_COMMAND = "customColorComment.refreshDiagnostics";
 const WARNING_VIEW_ID = "customColorComment.warnings";
-const WORKSPACE_SCAN_EXCLUDE_GLOB =
-  "**/{.git,node_modules,out,dist,build}/**";
+const WORKSPACE_SCAN_EXCLUDE_GLOB = "**/{.git,node_modules,out,dist,build}/**";
 const WORKSPACE_SCAN_EXCLUDED_DIRECTORIES = new Set([
   ".git",
   "node_modules",
@@ -106,7 +106,14 @@ const PROJECT_EXCLUSION_PROFILES = [
   {
     name: "python",
     markerGlob: "**/{pyproject.toml,setup.py,requirements.txt}",
-    directories: ["__pycache__", ".pytest_cache", ".mypy_cache", ".ruff_cache", ".venv", "venv"],
+    directories: [
+      "__pycache__",
+      ".pytest_cache",
+      ".mypy_cache",
+      ".ruff_cache",
+      ".venv",
+      "venv",
+    ],
   },
   {
     name: "rust",
@@ -147,14 +154,14 @@ type WarningTreeNode =
       diagnostic: vscode.Diagnostic;
     };
 
-class WarningTreeProvider
-  implements vscode.TreeDataProvider<WarningTreeNode>
-{
-  private readonly changeEmitter =
-    new vscode.EventEmitter<WarningTreeNode | undefined>();
+class WarningTreeProvider implements vscode.TreeDataProvider<WarningTreeNode> {
+  private readonly changeEmitter = new vscode.EventEmitter<
+    WarningTreeNode | undefined
+  >();
   readonly onDidChangeTreeData = this.changeEmitter.event;
 
   refresh(): void {
+    updateWarningTreeBadge();
     this.changeEmitter.fire(undefined);
   }
 
@@ -302,6 +309,31 @@ function normaliseErrorStyle(style: TagStyle | undefined): {
   const warning = !!style.errorWarning || legacyError !== undefined;
 
   return { enabled, color, warning };
+}
+
+function updateWarningTreeBadge(): void {
+  if (!warningTreeView) return;
+
+  const showProblemCount = vscode.workspace
+    .getConfiguration("ccComment")
+    .get<boolean>("showProblemCount", true);
+  if (!showProblemCount || !diagnosticCollection) {
+    warningTreeView.badge = undefined;
+    return;
+  }
+
+  let count = 0;
+  diagnosticCollection.forEach((_uri, diagnostics) => {
+    count += diagnostics.length;
+  });
+
+  warningTreeView.badge =
+    count > 0
+      ? {
+          value: count,
+          tooltip: `${count} Custom Color Comment problem${count === 1 ? "" : "s"}`,
+        }
+      : undefined;
 }
 
 function diagnosticSeverity(
@@ -860,12 +892,10 @@ export function activate(context: vscode.ExtensionContext) {
   );
   context.subscriptions.push(diagnosticCollection);
   warningTreeProvider = new WarningTreeProvider();
-  context.subscriptions.push(
-    vscode.window.registerTreeDataProvider(
-      WARNING_VIEW_ID,
-      warningTreeProvider,
-    ),
-  );
+  warningTreeView = vscode.window.createTreeView(WARNING_VIEW_ID, {
+    treeDataProvider: warningTreeProvider,
+  });
+  context.subscriptions.push(warningTreeView);
   loadConfig();
   context.subscriptions.push(
     vscode.commands.registerCommand(REFRESH_COMMAND, async () => {
@@ -945,6 +975,7 @@ export function activate(context: vscode.ExtensionContext) {
     vscode.workspace.onDidChangeConfiguration((e) => {
       if (e.affectsConfiguration("ccComment")) {
         loadConfig();
+        updateWarningTreeBadge();
         void refreshWorkspaceDiagnostics().catch((error: unknown) => {
           console.error(
             "Custom Color Comment configuration rescan failed:",
@@ -964,5 +995,6 @@ export function deactivate() {
   disposeAllDecorations();
   diagnosticCollection?.dispose();
   diagnosticCollection = undefined;
+  warningTreeView = undefined;
   warningTreeProvider = undefined;
 }

@@ -34,11 +34,18 @@
         "applescript",
         "glsl",
         "hlsl",
+        "mypy",
+        "normalise",
+        "pubspec",
+        "pycache",
+        "pyproject",
+        "pytest",
         "rescan",
         "rescanning",
         "rescans",
         "strikethrough",
         "TODOING",
+        "venv",
         "vscodeignore"
     ],
 }
