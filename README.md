@@ -89,13 +89,15 @@ Write a tag right after your comment marker:
 },
 "ccComment.ignoreWarning": [],
 "ccComment.ignoreAggressive": ["ios/**", "macos/**"],
-"ccComment.showProblemCount": true
+"ccComment.showSideBarCount": true,
+"ccComment.showInProblems": true
 ```
 
 The **CC Warnings** activity bar icon shows the total number of diagnostics
-created by this extension. Set `"ccComment.showProblemCount": false` to hide the
-badge. This only affects the sidebar badge; VS Code's Problems panel continues
-to show problems from all sources.
+created by this extension. Set `"ccComment.showSideBarCount": false` to hide the
+badge. Set `"ccComment.showInProblems": false` to keep these diagnostics in the
+CC Warnings sidebar while hiding them from VS Code's Problems panel. Other
+extensions' and tools' problems are unaffected.
 
 Each value is either a plain hex string, or an object with any of:
 
@@ -110,7 +112,7 @@ Each value is either a plain hex string, or an object with any of:
 | `opacity`           | number  | `0`–`1`, fades the text                                       |
 | `error`             | boolean | enable diagnostics for this tag                               |
 | `errorColor`        | string  | `"blue"` = Information, `"yellow"` = Warning, `"red"` = Error |
-| `errorWarning`      | boolean | create a native VS Code diagnostic and show it in Problems    |
+| `errorWarning`      | boolean | create a native VS Code diagnostic; shown in Problems when `ccComment.showInProblems` is enabled |
 
 ### Controlling which paths are checked
 

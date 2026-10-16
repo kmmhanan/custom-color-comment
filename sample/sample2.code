@@ -1,3 +1,5 @@
+// ccComment:disable-errors
+
 // TODO ~ Add validation for the incoming user settings (#00AEEF; blue Information diagnostic).
 // TODO ~ Add unit tests for the comment parser.
 // TODO ~ Handle network timeouts when loading remote configuration.

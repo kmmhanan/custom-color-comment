@@ -66,6 +66,10 @@ let tagRegexes: { tag: string; regex: RegExp }[] = [];
 const tagStyles: Map<string, TagStyle> = new Map();
 let debounceTimer: ReturnType<typeof setTimeout> | undefined;
 let diagnosticCollection: vscode.DiagnosticCollection | undefined;
+const warningDiagnostics = new Map<
+  string,
+  { uri: vscode.Uri; diagnostics: vscode.Diagnostic[] }
+>();
 let warningTreeProvider: WarningTreeProvider | undefined;
 let warningTreeView: vscode.TreeView<WarningTreeNode> | undefined;
 let isWorkspaceScanRunning = false;
@@ -168,11 +172,10 @@ class WarningTreeProvider implements vscode.TreeDataProvider<WarningTreeNode> {
   private getDiagnosticEntries(): Array<
     [vscode.Uri, readonly vscode.Diagnostic[]]
   > {
-    const entries: Array<[vscode.Uri, readonly vscode.Diagnostic[]]> = [];
-    diagnosticCollection?.forEach((uri, diagnostics) => {
-      entries.push([uri, diagnostics]);
-    });
-    return entries;
+    return Array.from(warningDiagnostics.values(), ({ uri, diagnostics }) => [
+      uri,
+      diagnostics,
+    ]);
   }
 
   getTreeItem(element: WarningTreeNode): vscode.TreeItem {
@@ -314,18 +317,18 @@ function normaliseErrorStyle(style: TagStyle | undefined): {
 function updateWarningTreeBadge(): void {
   if (!warningTreeView) return;
 
-  const showProblemCount = vscode.workspace
+  const showSideBarCount = vscode.workspace
     .getConfiguration("ccComment")
-    .get<boolean>("showProblemCount", true);
-  if (!showProblemCount || !diagnosticCollection) {
+    .get<boolean>("showSideBarCount", true);
+  if (!showSideBarCount) {
     warningTreeView.badge = undefined;
     return;
   }
 
   let count = 0;
-  diagnosticCollection.forEach((_uri, diagnostics) => {
+  for (const { diagnostics } of warningDiagnostics.values()) {
     count += diagnostics.length;
-  });
+  }
 
   warningTreeView.badge =
     count > 0
@@ -334,6 +337,44 @@ function updateWarningTreeBadge(): void {
           tooltip: `${count} Custom Color Comment problem${count === 1 ? "" : "s"}`,
         }
       : undefined;
+}
+
+function updateDocumentDiagnostics(
+  uri: vscode.Uri,
+  diagnostics: vscode.Diagnostic[],
+): void {
+  warningDiagnostics.set(uri.toString(), { uri, diagnostics });
+  if (
+    vscode.workspace
+      .getConfiguration("ccComment")
+      .get<boolean>("showInProblems", true)
+  ) {
+    diagnosticCollection?.set(uri, diagnostics);
+  } else {
+    diagnosticCollection?.delete(uri);
+  }
+}
+
+function deleteDocumentDiagnostics(uri: vscode.Uri): void {
+  warningDiagnostics.delete(uri.toString());
+  diagnosticCollection?.delete(uri);
+}
+
+function syncProblemsVisibility(): void {
+  if (!diagnosticCollection) return;
+
+  if (
+    !vscode.workspace
+      .getConfiguration("ccComment")
+      .get<boolean>("showInProblems", true)
+  ) {
+    diagnosticCollection.clear();
+    return;
+  }
+
+  for (const { uri, diagnostics } of warningDiagnostics.values()) {
+    diagnosticCollection.set(uri, diagnostics);
+  }
 }
 
 function diagnosticSeverity(
@@ -583,14 +624,14 @@ function hasDisableErrorsDirective(
 function updateDocument(doc: vscode.TextDocument, editor?: vscode.TextEditor) {
   if (doc.uri.scheme === "git") return;
   if (isExcludedFromWorkspaceScan(doc.uri)) {
-    diagnosticCollection?.delete(doc.uri);
+    deleteDocumentDiagnostics(doc.uri);
     if (!isWorkspaceScanRunning) warningTreeProvider?.refresh();
     return;
   }
 
   const tokens = commentTokensForLanguage(doc.languageId);
   if (!tokens) {
-    diagnosticCollection?.set(doc.uri, []);
+    updateDocumentDiagnostics(doc.uri, []);
     if (!isWorkspaceScanRunning) warningTreeProvider?.refresh();
     return;
   }
@@ -771,7 +812,7 @@ function updateDocument(doc: vscode.TextDocument, editor?: vscode.TextEditor) {
     }
   }
 
-  diagnosticCollection?.set(doc.uri, diagnostics);
+  updateDocumentDiagnostics(doc.uri, diagnostics);
   if (!isWorkspaceScanRunning) warningTreeProvider?.refresh();
 }
 
@@ -818,6 +859,7 @@ async function runWorkspaceDiagnosticsRefresh(): Promise<void> {
       try {
         await detectProjectExclusions();
         diagnosticCollection?.clear();
+        warningDiagnostics.clear();
         warningTreeProvider?.refresh();
         const foundUris = await vscode.workspace.findFiles(
           COMMENT_FILE_GLOB,
@@ -935,7 +977,7 @@ export function activate(context: vscode.ExtensionContext) {
         }
       }),
       watcher.onDidDelete((uri) => {
-        diagnosticCollection?.delete(uri);
+        deleteDocumentDiagnostics(uri);
         warningTreeProvider?.refresh();
       }),
     );
@@ -968,13 +1010,14 @@ export function activate(context: vscode.ExtensionContext) {
         document.uri.scheme !== "file" ||
         matchesPathPatterns(document.uri, ignoreAggressivePatterns)
       ) {
-        diagnosticCollection?.delete(document.uri);
+        deleteDocumentDiagnostics(document.uri);
         warningTreeProvider?.refresh();
       }
     }),
     vscode.workspace.onDidChangeConfiguration((e) => {
       if (e.affectsConfiguration("ccComment")) {
         loadConfig();
+        syncProblemsVisibility();
         updateWarningTreeBadge();
         void refreshWorkspaceDiagnostics().catch((error: unknown) => {
           console.error(
@@ -995,6 +1038,7 @@ export function deactivate() {
   disposeAllDecorations();
   diagnosticCollection?.dispose();
   diagnosticCollection = undefined;
+  warningDiagnostics.clear();
   warningTreeView = undefined;
   warningTreeProvider = undefined;
 }

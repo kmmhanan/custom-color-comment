@@ -1,3 +1,5 @@
+// ccComment:disable-errors
+
 // Custom Color Comment samples — tag, readable message, and its default color.
 
 //!     : Critical - stop the release until this is resolved (#FF2D00).

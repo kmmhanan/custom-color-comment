@@ -30,6 +30,8 @@
             "errorWarning": true
         },
     },
+    "ccComment.showSideBarCount": true,
+    "ccComment.showInProblems": true,
     "cSpell.words": [
         "applescript",
         "glsl",
