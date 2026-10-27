@@ -38,6 +38,7 @@
         "hlsl",
         "mypy",
         "normalise",
+        "openvsx",
         "pubspec",
         "pycache",
         "pyproject",
