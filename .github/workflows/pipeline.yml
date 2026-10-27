@@ -5,7 +5,8 @@ on:
     branches:
       - main
 
-  workflow_dispatch: # Manual trigger point
+  # Manual trigger point
+  workflow_dispatch:
 
 permissions:
   id-token: write
