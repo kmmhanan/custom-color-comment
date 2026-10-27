@@ -101,17 +101,17 @@ extensions' and tools' problems are unaffected.
 
 Each value is either a plain hex string, or an object with any of:
 
-| Property            | Type    | Effect                                                        |
-| ------------------- | ------- | ------------------------------------------------------------- |
-| `color`             | string  | text color (hex)                                              |
-| `backgroundColor`   | string  | background color (hex)                                        |
-| `backgroundOpacity` | number  | background transparency, `0`–`1` (requires `backgroundColor`) |
-| `bold`              | boolean | bold text                                                     |
-| `italic`            | boolean | italic text                                                   |
-| `lineThrough`       | boolean | strikethrough                                                 |
-| `opacity`           | number  | `0`–`1`, fades the text                                       |
-| `error`             | boolean | enable diagnostics for this tag                               |
-| `errorColor`        | string  | `"blue"` = Information, `"yellow"` = Warning, `"red"` = Error |
+| Property            | Type    | Effect                                                                                           |
+| ------------------- | ------- | ------------------------------------------------------------------------------------------------ |
+| `color`             | string  | text color (hex)                                                                                 |
+| `backgroundColor`   | string  | background color (hex)                                                                           |
+| `backgroundOpacity` | number  | background transparency, `0`–`1` (requires `backgroundColor`)                                    |
+| `bold`              | boolean | bold text                                                                                        |
+| `italic`            | boolean | italic text                                                                                      |
+| `lineThrough`       | boolean | strikethrough                                                                                    |
+| `opacity`           | number  | `0`–`1`, fades the text                                                                          |
+| `error`             | boolean | enable diagnostics for this tag                                                                  |
+| `errorColor`        | string  | `"blue"` = Information, `"yellow"` = Warning, `"red"` = Error                                    |
 | `errorWarning`      | boolean | create a native VS Code diagnostic; shown in Problems when `ccComment.showInProblems` is enabled |
 
 ### Controlling which paths are checked
